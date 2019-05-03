@@ -15,13 +15,17 @@ import static java.util.Collections.singletonList;
 
 public class Utils {
     private static final String CSV_INPUT = "lawmaking_hackathon.csv";
+    private static final String CSV_INPUT_INITIATORS_ACTIVE = "lawmaking_hackathon_initiators_active.csv";
     private static final String CSV_OUTPUT_SPLIT = "lawmaking_hackathon_split.csv";
     private static final String CSV_OUTPUT_PAIRS = "lawmaking_hackathon_pairs.csv";
     private static final int LAW_ID_INDEX = 0;
     private static final int LAW_INITIATORS_INDEX = 1;
+    private static final int INITIATORS_ID_INDEX = 0;
 
     public static void main(String[] args) {
         Map<String, Set<String>> idToInitiators = getIdToInitiators();
+
+        idToInitiators = filterActive(idToInitiators);
 
         split(idToInitiators);
 
@@ -52,6 +56,35 @@ public class Utils {
             e.printStackTrace();
         }
         return map;
+    }
+
+    private static Set<String> getInitiatorsActive() {
+        Set<String> set = new HashSet<>();
+
+        try (CSVReader reader = new CSVReader(new FileReader(CSV_INPUT_INITIATORS_ACTIVE))) {
+            String[] line;
+            int i = 0;
+            while ((line = reader.readNext()) != null) {
+                if (i++ == 0) continue;
+                set.add(line[INITIATORS_ID_INDEX]);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return set;
+    }
+
+    private static Map<String, Set<String>> filterActive(Map<String, Set<String>> idToInitiators) {
+        Set<String> initiatorsActive = getInitiatorsActive();
+
+        idToInitiators = EntryStream.of(idToInitiators)
+                .mapValues(is -> {
+                    is.retainAll(initiatorsActive);
+                    return is;
+                })
+                .filterValues(is -> !is.isEmpty())
+                .toMap();
+        return idToInitiators;
     }
 
     private static void pairs(Map<String, Set<String>> idToInitiators) {
